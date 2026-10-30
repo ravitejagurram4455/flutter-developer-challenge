@@ -1,0 +1,28 @@
+name: flutter_tui_challenege
+description: "TUI Mobility Hub code challenge: find the cheapest route between destinations."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.13.5
+
+dependencies:
+  collection: ^1.19.1
+  equatable: ^3.0.0
+  flutter:
+    sdk: flutter
+  flutter_bloc: ^9.1.1
+  flutter_map: ^8.3.2
+  flutter_svg: ^2.3.2
+  http: ^1.6.0
+  latlong2: ^0.10.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  bloc_test: ^10.0.0
+  mocktail: ^1.0.5
+
+flutter:
+  uses-material-design: true
