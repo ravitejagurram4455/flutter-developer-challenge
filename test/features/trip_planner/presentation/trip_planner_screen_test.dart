@@ -3,15 +3,14 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_tui_challenege/core/error/failures.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/city.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/connection.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/dijkstra_route_finder.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/trip_repository.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/trip_route.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/presentation/cubit/trip_planner_cubit.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/presentation/trip_planner_screen.dart';
-
+import 'package:flutter_tui_challenge/core/error/failures.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/city.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/connection.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/dijkstra_route_finder.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/trip_repository.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/trip_route.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/presentation/cubit/trip_planner_cubit.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/presentation/trip_planner_screen.dart';
 
 import 'package:mocktail/mocktail.dart';
 
@@ -93,6 +92,39 @@ void main() {
 
     expect(find.text('Could not load destinations'), findsNothing);
     expect(find.widgetWithText(TextField, 'Departure'), findsOneWidget);
+  });
+
+  testWidgets('finds routes without images, and retrying keeps the cities', (
+    tester,
+  ) async {
+    when(repository.loadTripData).thenAnswer(
+      (_) async => TripData(
+        cities: _data.cities,
+        connections: _data.connections,
+        imagesUnavailable: true,
+      ),
+    );
+
+    await pumpScreen(tester);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('images could not be loaded'), findsOneWidget);
+
+    await enterCity(tester, 'Departure', 'Alpha');
+    await enterCity(tester, 'Destination', 'Gamma');
+    expect(find.text('30.50'), findsOneWidget);
+
+    when(repository.loadTripData).thenAnswer((_) async => _data);
+    await tester.tap(find.widgetWithText(TextButton, 'Retry'));
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('images could not be loaded'), findsNothing);
+    String fieldText(String label) => tester
+        .widget<TextField>(find.widgetWithText(TextField, label))
+        .controller!
+        .text;
+    expect(fieldText('Departure'), 'Alpha');
+    expect(fieldText('Destination'), 'Gamma');
+    expect(find.text('30.50'), findsOneWidget);
   });
 
   testWidgets('shows an empty state when there are no cities', (tester) async {

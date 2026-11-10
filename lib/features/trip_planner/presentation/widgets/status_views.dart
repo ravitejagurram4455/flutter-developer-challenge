@@ -49,3 +49,42 @@ class StatusView extends StatelessWidget {
     );
   }
 }
+
+/// A one-line notice about a partial problem, with a retry button.
+class NoticeBanner extends StatelessWidget {
+  const NoticeBanner({
+    super.key,
+    required this.icon,
+    required this.message,
+    required this.onRetry,
+  });
+
+  final IconData icon;
+  final String message;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Card(
+      margin: EdgeInsets.zero,
+      color: colorScheme.secondaryContainer,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 4, 8, 4),
+        child: Row(
+          spacing: 12,
+          children: [
+            Icon(icon, color: colorScheme.onSecondaryContainer),
+            Expanded(
+              child: Text(
+                message,
+                style: TextStyle(color: colorScheme.onSecondaryContainer),
+              ),
+            ),
+            TextButton(onPressed: onRetry, child: const Text('Retry')),
+          ],
+        ),
+      ),
+    );
+  }
+}

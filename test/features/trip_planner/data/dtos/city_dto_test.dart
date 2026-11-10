@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/data/dtos/city_dto.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/city.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/data/dtos/city_dto.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/city.dart';
 
 void main() {
   final baseUrl = Uri.parse('http://api.test:1234');

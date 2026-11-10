@@ -1,11 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_tui_challenege/core/error/failures.dart';
-import 'package:flutter_tui_challenege/core/network/api_client.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/data/dtos/city_dto.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/data/dtos/connection_dto.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/data/trip_remote_data_source.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/data/trip_repository_impl.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/city.dart';
+import 'package:flutter_tui_challenge/core/error/failures.dart';
+import 'package:flutter_tui_challenge/core/network/api_client.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/data/dtos/city_dto.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/data/dtos/connection_dto.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/data/trip_remote_data_source.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/data/trip_repository_impl.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/city.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/trip_repository.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockDataSource extends Mock implements TripRemoteDataSource {}
@@ -82,6 +85,50 @@ void main() {
 
     expect(data.cities, isEmpty);
     expect(data.connections, isEmpty);
+    expect(data.imagesUnavailable, isFalse);
+  });
+
+  test('requests /connections and /cities at the same time', () async {
+    final connections = Completer<List<ConnectionDto>>();
+    when(dataSource.fetchConnections).thenAnswer((_) => connections.future);
+    when(dataSource.fetchCities).thenAnswer((_) async => const []);
+
+    final load = repository.loadTripData();
+    await Future<void>.delayed(Duration.zero);
+
+    verify(dataSource.fetchCities).called(1);
+    connections.complete([_connection('A', 'B')]);
+    expect((await load).connections, hasLength(1));
+  });
+
+  group('when /cities fails, still loads the connections', () {
+    final failures = <String, Exception>{
+      'network error': const NetworkException('offline'),
+      'server error': const ServerException(500),
+      'invalid data': const FormatException('bad'),
+    };
+
+    for (final MapEntry(key: name, value: error) in failures.entries) {
+      test(name, () async {
+        stub(connections: [_connection('A', 'B')]);
+        when(dataSource.fetchCities).thenThrow(error);
+
+        final data = await repository.loadTripData();
+
+        expect(
+          data,
+          TripData(
+            cities: const [
+              City(name: 'A'),
+              City(name: 'B'),
+            ],
+            connections: data.connections,
+            imagesUnavailable: true,
+          ),
+        );
+        expect(data.connections, hasLength(1));
+      });
+    }
   });
 
   group('failures', () {
@@ -89,7 +136,8 @@ void main() {
 
     test('maps NetworkException to NetworkFailure', () {
       stub();
-      when(dataSource.fetchCities).thenThrow(const NetworkException('offline'));
+      when(dataSource.fetchConnections)
+          .thenThrow(const NetworkException('offline'));
 
       expect(repository.loadTripData(), throwsFailure<NetworkFailure>());
     });

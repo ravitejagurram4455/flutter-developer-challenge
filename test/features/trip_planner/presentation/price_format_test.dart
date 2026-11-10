@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/presentation/price_format.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/presentation/price_format.dart';
 
 void main() {
   test('formats whole and fractional amounts', () {

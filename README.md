@@ -54,7 +54,9 @@ lib/
   turns every expected error into a sealed `Failure`.
 - **Presentation** has one `TripPlannerCubit` with a sealed state (`Loading`,
   `LoadFailure`, `Ready`) and a sealed route result (none selected, found, not
-  found). The UI switches over them exhaustively.
+  found). The UI switches over them exhaustively. The cubit also remembers the
+  selected cities, so a reload or retry keeps them while they are still in the
+  data.
 - Dependencies are passed through constructors and wired in `app.dart` with
   `RepositoryProvider` and `BlocProvider`.
 
@@ -81,6 +83,9 @@ Dijkstra's algorithm with a priority queue, over a directed graph.
 - **No currency symbol**, because the API doesn't provide a currency.
 - **One malformed record fails the whole load.** Skipping it could silently hide
   the cheapest route. Out-of-range coordinates count as malformed.
+- **Only `/connections` is required.** Both requests run in parallel. If
+  `/cities` fails, routes still work: every city comes from the connections, the
+  carousel shows image placeholders, and a notice offers a retry.
 - **The city list comes from the data.** It combines `/cities` with any city that
   only appears in `/connections`; those cities show an image fallback.
 - **Each leg uses its own coordinates**, so no per-city coordinates are needed.
@@ -91,6 +96,11 @@ Dijkstra's algorithm with a priority queue, over a directed graph.
   button. If both are the same city, the UI explains that and shows no route.
 - **The map is passed to the screen as a builder**, so widget tests replace it and
   never request tiles.
+- **Routes across the antimeridian stay in view.** flutter_map draws each leg the
+  short way, for example Los Angeles→Tokyo across the Pacific. The camera fits a
+  path whose longitudes follow those legs, built by `routePath`, because
+  `LatLngBounds` would clamp it to ±180° and centre the map on the wrong side of
+  the world.
 
 ## Assumptions
 
@@ -117,20 +127,16 @@ Dijkstra's algorithm with a priority queue, over a directed graph.
 
 ## Trade-offs
 
-- **Sequential requests:** `/connections` then `/cities`. That's simpler than
-  fetching in parallel and makes no noticeable difference on a local API.
-- **Straight map lines:** a leg across the antimeridian, such as Los Angeles→Tokyo,
-  crosses the map the long way. It is still plotted and fitted, but not the
-  shortest-looking path.
-- **All-or-nothing loading:** if `/cities` fails, the app shows an error even
-  though routes could still be calculated.
+- **Straight map lines:** legs are straight on the map, not great-circle arcs, so
+  long flights don't show the true flight path.
+- **Full reload on retry:** retrying after a missing `/cities` reloads both
+  endpoints, with a short loading state, rather than fetching only the images.
 - **Public OSM tiles:** fine for a demo, and the app identifies itself and shows
   attribution, but production use needs a tile provider suited to the traffic.
-- **Selection is lost on retry**, because a reload starts from a clean state.
 
 ## With more time
 
-- Draw legs across the antimeridian by the shorter path.
+- Draw legs as great-circle arcs.
 - Show the map and carousel side by side on wide screens.
 - Add real currency support if the API provides it.
 - Add an integration test suite to the repo and run it in CI.
@@ -140,7 +146,8 @@ Dijkstra's algorithm with a priority queue, over a directed graph.
 Run on Flutter 3.47.9 / Dart 3.13.7:
 
 - `flutter analyze`: no issues.
-- `flutter test`: 90 tests, all passed.
+- `flutter test`: 106 tests, all passed.
+- Debug builds for web, macOS, the iOS simulator and Android succeed.
 
 End to end against the running API, using a temporary driver that isn't part of
 this repo:
@@ -152,5 +159,10 @@ this repo:
 | Android emulator (`10.0.2.2`) | Same flow passed. Images and map tiles seen. |
 | macOS | Same flow passed. Map not visually checked. |
 | Web (Chrome, headless) | App loaded with API data and images. Route flow and map not exercised. |
+
+After the review fixes, the app was relaunched on the iOS simulator: it loaded
+normally, and with `/cities` returning 500 it still loaded, with the notice and
+image placeholders. The antimeridian camera fit was checked by rendering the map
+in a test. The full route flow was not repeated by hand.
 
 Not verified: a physical device, Linux and Windows, or a release build.

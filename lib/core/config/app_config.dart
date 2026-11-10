@@ -6,5 +6,5 @@ abstract final class AppConfig {
   );
 
   /// Identifies this app to the OpenStreetMap tile servers.
-  static const appId = 'com.tuichallenege.tripplanner';
+  static const appId = 'com.tuichallenge.tripplanner';
 }

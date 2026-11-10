@@ -5,8 +5,9 @@ import 'package:latlong2/latlong.dart';
 import '../../../../core/config/app_config.dart';
 import '../../domain/connection.dart';
 import '../../domain/trip_route.dart';
+import 'route_path.dart';
 
-/// Plots every leg of [route] on OpenStreetMap, fitted to the route's bounds.
+/// Plots every leg of [route] on OpenStreetMap, fitted to the route.
 class RouteMap extends StatelessWidget {
   const RouteMap({super.key, required this.route});
 
@@ -28,8 +29,11 @@ class RouteMap extends StatelessWidget {
       // The initial fit only applies once, so each new route needs a new map.
       key: ValueKey(route),
       options: MapOptions(
-        initialCameraFit: CameraFit.bounds(
-          bounds: LatLngBounds.fromPoints(points),
+        // flutter_map already draws each leg the short way. The camera fits a
+        // path whose longitudes follow those legs, so a route that crosses the
+        // antimeridian stays in view. LatLngBounds would clamp it to ±180°.
+        initialCameraFit: CameraFit.coordinates(
+          coordinates: [for (final point in routePath(route)) _latLng(point)],
           // Extra room at the bottom keeps markers clear of the attribution.
           padding: const EdgeInsets.fromLTRB(40, 40, 40, 64),
           maxZoom: 10,

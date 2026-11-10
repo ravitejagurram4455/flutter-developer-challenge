@@ -32,6 +32,7 @@ final class TripPlannerReady extends TripPlannerState {
     this.departure,
     this.destination,
     this.routeResult = const RouteNoneSelected(),
+    this.imagesUnavailable = false,
   });
 
   final List<City> cities;
@@ -39,6 +40,9 @@ final class TripPlannerReady extends TripPlannerState {
   final String? departure;
   final String? destination;
   final RouteResult routeResult;
+
+  /// True when the city images could not be loaded. Routes still work.
+  final bool imagesUnavailable;
 
   bool get isSameCity => departure != null && departure == destination;
 
@@ -49,6 +53,7 @@ final class TripPlannerReady extends TripPlannerState {
     departure,
     destination,
     routeResult,
+    imagesUnavailable,
   ];
 }
 

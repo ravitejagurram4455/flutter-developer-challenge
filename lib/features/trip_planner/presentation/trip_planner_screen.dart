@@ -63,6 +63,17 @@ class _ReadyView extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (state.imagesUnavailable)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                  child: NoticeBanner(
+                    icon: Icons.image_not_supported_outlined,
+                    message:
+                        'Destination images could not be loaded. '
+                        'Routes still work.',
+                    onRetry: cubit.load,
+                  ),
+                ),
               DestinationCarousel(
                 cities: state.cities,
                 selected: state.destination,

@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/connection.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/dijkstra_route_finder.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/route_finder.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/connection.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/dijkstra_route_finder.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/route_finder.dart';
 
 const _origin = Coordinates(latitude: 0, longitude: 0);
 

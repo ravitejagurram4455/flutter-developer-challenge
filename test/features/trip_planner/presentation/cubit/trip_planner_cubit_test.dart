@@ -1,13 +1,13 @@
 import 'package:bloc_test/bloc_test.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_tui_challenege/core/error/failures.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/city.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/connection.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/route_finder.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/trip_repository.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/domain/trip_route.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/presentation/cubit/trip_planner_cubit.dart';
-import 'package:flutter_tui_challenege/features/trip_planner/presentation/cubit/trip_planner_state.dart';
+import 'package:flutter_tui_challenge/core/error/failures.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/city.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/connection.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/route_finder.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/trip_repository.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/domain/trip_route.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/presentation/cubit/trip_planner_cubit.dart';
+import 'package:flutter_tui_challenge/features/trip_planner/presentation/cubit/trip_planner_state.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockRepository extends Mock implements TripRepository {}
@@ -89,6 +89,99 @@ void main() {
         const TripPlannerLoading(),
         _ready,
       ],
+    );
+  });
+
+  group('reload', () {
+    const selected = TripPlannerReady(
+      cities: _cities,
+      connections: _connections,
+      departure: 'A',
+      destination: 'B',
+      routeResult: RouteFound(_route),
+    );
+
+    blocTest<TripPlannerCubit, TripPlannerState>(
+      'passes on that images are unavailable',
+      setUp: () => when(repository.loadTripData).thenAnswer(
+        (_) async => const TripData(
+          cities: _cities,
+          connections: _connections,
+          imagesUnavailable: true,
+        ),
+      ),
+      build: buildCubit,
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        const TripPlannerLoading(),
+        const TripPlannerReady(
+          cities: _cities,
+          connections: _connections,
+          imagesUnavailable: true,
+        ),
+      ],
+    );
+
+    blocTest<TripPlannerCubit, TripPlannerState>(
+      'keeps the selection and finds the route again',
+      setUp: () {
+        when(repository.loadTripData).thenAnswer((_) async => _data);
+        stubRoute(_route);
+      },
+      build: buildCubit,
+      seed: () => selected,
+      act: (cubit) => cubit.load(),
+      expect: () => [const TripPlannerLoading(), selected],
+      verify: (_) => verify(
+        () => routeFinder.findCheapestRoute(
+          connections: _connections,
+          from: 'A',
+          to: 'B',
+        ),
+      ).called(1),
+    );
+
+    blocTest<TripPlannerCubit, TripPlannerState>(
+      'keeps the selection through a failed reload and a retry',
+      setUp: () {
+        when(repository.loadTripData).thenThrow(const NetworkFailure());
+        stubRoute(_route);
+      },
+      build: buildCubit,
+      seed: () => selected,
+      act: (cubit) async {
+        await cubit.load();
+        when(repository.loadTripData).thenAnswer((_) async => _data);
+        await cubit.load();
+      },
+      expect: () => [
+        const TripPlannerLoading(),
+        const TripPlannerLoadFailure(NetworkFailure()),
+        const TripPlannerLoading(),
+        selected,
+      ],
+    );
+
+    blocTest<TripPlannerCubit, TripPlannerState>(
+      'drops a selected city that is no longer in the data',
+      setUp: () => when(repository.loadTripData).thenAnswer(
+        (_) async => const TripData(
+          cities: [City(name: 'A')],
+          connections: [],
+        ),
+      ),
+      build: buildCubit,
+      seed: () => selected,
+      act: (cubit) => cubit.load(),
+      expect: () => [
+        const TripPlannerLoading(),
+        const TripPlannerReady(
+          cities: [City(name: 'A')],
+          connections: [],
+          departure: 'A',
+        ),
+      ],
+      verify: (_) => verifyZeroInteractions(routeFinder),
     );
   });
 

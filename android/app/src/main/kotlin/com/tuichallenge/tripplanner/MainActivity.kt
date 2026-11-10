@@ -1,4 +1,4 @@
-package com.tuichallenege.tripplanner
+package com.tuichallenge.tripplanner
 
 import io.flutter.embedding.android.FlutterActivity
 

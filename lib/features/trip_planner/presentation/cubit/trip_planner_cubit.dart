@@ -12,13 +12,34 @@ class TripPlannerCubit extends Cubit<TripPlannerState> {
   final TripRepository _repository;
   final RouteFinder _routeFinder;
 
-  /// Loads the trip data. Also serves as the retry action.
+  /// The last selection, kept outside the state so that it survives the
+  /// loading and failure states of a reload.
+  ({String? departure, String? destination}) _selection = (
+    departure: null,
+    destination: null,
+  );
+
+  /// Loads the trip data. Also serves as the retry action, and keeps the
+  /// selected cities if they are still in the data.
   Future<void> load() async {
+    if (state case TripPlannerReady(:final departure, :final destination)) {
+      _selection = (departure: departure, destination: destination);
+    }
     emit(const TripPlannerLoading());
     try {
       final data = await _repository.loadTripData();
+      final names = {for (final city in data.cities) city.name};
+      String? stillListed(String? city) => names.contains(city) ? city : null;
       emit(
-        TripPlannerReady(cities: data.cities, connections: data.connections),
+        _withSelection(
+          TripPlannerReady(
+            cities: data.cities,
+            connections: data.connections,
+            imagesUnavailable: data.imagesUnavailable,
+          ),
+          departure: stillListed(_selection.departure),
+          destination: stillListed(_selection.destination),
+        ),
       );
     } on Failure catch (failure) {
       emit(TripPlannerLoadFailure(failure));
@@ -45,14 +66,22 @@ class TripPlannerCubit extends Cubit<TripPlannerState> {
     if (departure == ready.departure && destination == ready.destination) {
       return;
     }
-    emit(
-      TripPlannerReady(
-        cities: ready.cities,
-        connections: ready.connections,
-        departure: departure,
-        destination: destination,
-        routeResult: _findRoute(ready, departure, destination),
-      ),
+    emit(_withSelection(ready, departure: departure, destination: destination));
+  }
+
+  TripPlannerReady _withSelection(
+    TripPlannerReady ready, {
+    required String? departure,
+    required String? destination,
+  }) {
+    _selection = (departure: departure, destination: destination);
+    return TripPlannerReady(
+      cities: ready.cities,
+      connections: ready.connections,
+      departure: departure,
+      destination: destination,
+      routeResult: _findRoute(ready, departure, destination),
+      imagesUnavailable: ready.imagesUnavailable,
     );
   }
 
